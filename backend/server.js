@@ -173,14 +173,27 @@ app.get('/api/predict/:ticker', async (req, res) => {
     try {
       const ticker = req.params.ticker.toUpperCase();
   
-      const dbRes = await dbQuery(
-        `SELECT date, close FROM historical_prices
-         WHERE ticker=$1 ORDER BY date DESC LIMIT 14`,
-        [ticker]
-      );
+      // Check env vars
+      if (!process.env.GROQ_API_KEY || !process.env.GROQ_MODEL || !process.env.GROQ_BASE) {
+        console.error("❌ Missing Groq environment variables");
+        return res.status(500).json({ error: "Server misconfigured: Missing Groq API settings" });
+      }
+  
+      // Fetch last 14 days of data
+      let dbRes;
+      try {
+        dbRes = await dbQuery(
+          `SELECT date, close FROM historical_prices
+           WHERE ticker=$1 ORDER BY date DESC LIMIT 14`,
+          [ticker]
+        );
+      } catch (dbErr) {
+        console.error("❌ DB query failed:", dbErr);
+        return res.status(500).json({ error: "Database error", details: dbErr.message });
+      }
   
       if (dbRes.rows.length === 0) {
-        return res.status(404).json({ error: 'No data' });
+        return res.status(404).json({ error: 'No historical data found for ticker' });
       }
   
       const series = dbRes.rows
@@ -191,21 +204,33 @@ app.get('/api/predict/:ticker', async (req, res) => {
   
       const prompt = `Historical prices for ${ticker}:\n${series}\nPredict next-day close price in JSON with keys predicted_price, confidence, rationale.`;
   
-      const r = await fetch(`${process.env.GROQ_BASE}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: process.env.GROQ_MODEL,
-          messages: [
-            { role: 'system', content: 'Output only JSON.' },
-            { role: 'user', content: prompt }
-          ],
-          max_tokens: 200
-        })
-      });
+      let r;
+      try {
+        r = await fetch(`${process.env.GROQ_BASE}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: process.env.GROQ_MODEL,
+            messages: [
+              { role: 'system', content: 'Output only JSON.' },
+              { role: 'user', content: prompt }
+            ],
+            max_tokens: 200
+          })
+        });
+      } catch (fetchErr) {
+        console.error("❌ Groq API fetch failed:", fetchErr);
+        return res.status(500).json({ error: "Failed to call Groq API", details: fetchErr.message });
+      }
+  
+      if (!r.ok) {
+        const errText = await r.text();
+        console.error(`❌ Groq API error [${r.status}]:`, errText);
+        return res.status(r.status).json({ error: "Groq API request failed", details: errText });
+      }
   
       const j = await r.json();
       let content = j.choices?.[0]?.message?.content || '';
@@ -217,19 +242,25 @@ app.get('/api/predict/:ticker', async (req, res) => {
       try {
         parsed = JSON.parse(content);
       } catch {
+        console.warn("⚠️ AI did not return valid JSON:", content);
         parsed = { raw: content };
       }
   
-      const predictedPrice = parsed.predicted_price || null;
-      const confidence = parsed.confidence || null;
+      const predictedPrice = parsed.predicted_price ?? null;
+      const confidence = parsed.confidence ?? null;
       const rationale = parsed.rationale || "No rationale provided";
   
-      // Save prediction to DB
-      await dbQuery(
-        `INSERT INTO predictions (ticker, predicted_price, confidence, rationale)
-         VALUES ($1, $2, $3, $4)`,
-        [ticker, predictedPrice, confidence, rationale]
-      );
+      // Save prediction
+      try {
+        await dbQuery(
+          `INSERT INTO predictions (ticker, predicted_price, confidence, rationale)
+           VALUES ($1, $2, $3, $4)`,
+          [ticker, predictedPrice, confidence, rationale]
+        );
+      } catch (insertErr) {
+        console.error("❌ Failed to insert prediction into DB:", insertErr);
+        return res.status(500).json({ error: "Database insert failed", details: insertErr.message });
+      }
   
       res.json({
         prediction: {
@@ -240,11 +271,11 @@ app.get('/api/predict/:ticker', async (req, res) => {
       });
   
     } catch (err) {
+      console.error("❌ Unexpected error in /api/predict:", err);
       res.status(500).json({ error: err.message });
     }
   });
   
-
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
