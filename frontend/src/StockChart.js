@@ -2,16 +2,26 @@
 import React, { useMemo } from 'react';
 import {
   Chart as ChartJS,
-  TimeScale,
-  LinearScale,
-  PointElement,
+  LineController,
   LineElement,
-  BarElement,
+  PointElement,
+  LinearScale,
+  Title,
+  CategoryScale,
   Tooltip,
-  Legend,
-  Filler,
-  CategoryScale
+  Legend
 } from 'chart.js';
+
+ChartJS.register(
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Title,
+  Tooltip,
+  Legend
+);
 import 'chartjs-adapter-date-fns';
 import { Chart } from 'react-chartjs-2';
 import { sma, rsi } from './utils/chartUtils';
