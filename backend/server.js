@@ -4,6 +4,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const fetch = require('node-fetch');
 const yf = require('yahoo-finance2').default;
+const cors = require('cors');
 
 const HOST = process.env.PG_HOST || 'localhost';
 const PORT = process.env.PG_PORT || 4000;
