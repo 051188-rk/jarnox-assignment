@@ -24,10 +24,14 @@ pool.connect()
 
 const app = express();
 app.use(express.json());
-const cors = require('cors');
 app.use(cors({
-  origin: FURL
-}));
+    origin: [
+      "http://localhost:3000", // local dev
+      "https://jarnox-assignment-l885.vercel.app" // deployed Vercel site
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+  }));
 
 
 // Utility function for DB queries
