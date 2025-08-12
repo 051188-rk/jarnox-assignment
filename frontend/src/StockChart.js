@@ -1,4 +1,3 @@
-// src/StockChart.jsx
 import React, { useMemo } from 'react';
 import {
   Chart as ChartJS,
@@ -9,8 +8,11 @@ import {
   Title,
   CategoryScale,
   Tooltip,
-  Legend
+  Legend,
+  TimeScale // <-- this is the missing one
 } from 'chart.js';
+
+import 'chartjs-adapter-date-fns'; // Needed for time parsing/formatting
 
 ChartJS.register(
   LineController,
@@ -18,13 +20,15 @@ ChartJS.register(
   PointElement,
   LinearScale,
   CategoryScale,
+  TimeScale, // <-- register it here
   Title,
   Tooltip,
   Legend
 );
-import 'chartjs-adapter-date-fns';
+
 import { Chart } from 'react-chartjs-2';
 import { sma, rsi } from './utils/chartUtils';
+
 
 ChartJS.register(
   TimeScale, LinearScale, CategoryScale,
