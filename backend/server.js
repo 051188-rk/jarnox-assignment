@@ -171,25 +171,31 @@ app.get('/api/historical/:ticker', async (req, res) => {
 // AI price prediction
 app.get('/api/predict/:ticker?', async (req, res) => {
     try {
-      // Support both param and query
+      // Allow both param and query for ticker
       const tickerParam = req.params.ticker;
       const tickerQuery = req.query.ticker;
       const ticker = (tickerParam || tickerQuery || '').toUpperCase();
   
       if (!ticker) {
-        return res.status(400).json({ error: 'Ticker is required (e.g., /api/predict/AMZN or ?ticker=AMZN)' });
+        return res.status(400).json({
+          error: 'Ticker is required. Use /api/predict/AAPL or /api/predict?ticker=AAPL'
+        });
       }
   
+      // Fetch last 14 days of historical prices
       const dbRes = await dbQuery(
         `SELECT date, close FROM historical_prices
-         WHERE ticker=$1 ORDER BY date DESC LIMIT 14`,
+         WHERE ticker=$1
+         ORDER BY date DESC
+         LIMIT 14`,
         [ticker]
       );
   
       if (dbRes.rows.length === 0) {
-        return res.status(404).json({ error: 'No data' });
+        return res.status(404).json({ error: 'No data found for this ticker' });
       }
   
+      // Prepare the historical series for the prompt
       const series = dbRes.rows
         .slice()
         .reverse()
@@ -198,6 +204,7 @@ app.get('/api/predict/:ticker?', async (req, res) => {
   
       const prompt = `Historical prices for ${ticker}:\n${series}\nPredict next-day close price in JSON with keys predicted_price, confidence, rationale.`;
   
+      // Call Groq API
       const r = await fetch(`${process.env.GROQ_BASE}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -229,7 +236,7 @@ app.get('/api/predict/:ticker?', async (req, res) => {
   
       const predictedPrice = parsed.predicted_price || null;
       const confidence = parsed.confidence || null;
-      const rationale = parsed.rationale || "No rationale provided";
+      const rationale = parsed.rationale || 'No rationale provided';
   
       // Save prediction to DB
       await dbQuery(
@@ -247,9 +254,11 @@ app.get('/api/predict/:ticker?', async (req, res) => {
       });
   
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      console.error(err);
+      res.status(500).json({ error: err.message || 'Server error' });
     }
   });
+  
   
   
 
