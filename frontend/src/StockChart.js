@@ -2,17 +2,20 @@ import React, { useMemo } from 'react';
 import {
   Chart as ChartJS,
   LineController,
+  BarController,   // <-- missing earlier
   LineElement,
+  BarElement,
   PointElement,
   LinearScale,
-  Title,
   CategoryScale,
+  TimeScale,
+  Title,
   Tooltip,
   Legend,
-  TimeScale,
-  BarElement,
   Filler
 } from 'chart.js';
+
+
 import 'chartjs-adapter-date-fns';
 import { Chart } from 'react-chartjs-2';
 import { sma, rsi } from './utils/chartUtils';
@@ -20,18 +23,18 @@ import { sma, rsi } from './utils/chartUtils';
 // ✅ Register all required components once
 ChartJS.register(
   LineController,
+  BarController,   // <-- register it
   LineElement,
+  BarElement,
   PointElement,
   LinearScale,
   CategoryScale,
   TimeScale,
-  BarElement,
   Title,
   Tooltip,
   Legend,
   Filler
 );
-
 export default function StockChart({ data }) {
   const prepared = useMemo(() => {
     if (!data || data.length === 0) return null;
