@@ -5,11 +5,17 @@ const { Pool } = require('pg');
 const fetch = require('node-fetch');
 const yf = require('yahoo-finance2').default;
 
+const HOST = process.env.PG_HOST || 'localhost';
+const PORT = process.env.PG_PORT || 5432;
+const FURL = process.env.FURL || 'http://localhost:3000';
+
+
+
 const app = express();
 app.use(express.json());
 const cors = require('cors');
 app.use(cors({
-  origin: 'http://localhost:3000'
+  origin: FURL
 }));
 
 const pool = new Pool({
@@ -226,7 +232,7 @@ app.get('/api/predict/:ticker', async (req, res) => {
   });
   
 
-const PORT = process.env.PORT || 4000;
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 app.get('/api/debug/data/:table', async (req, res) => {
