@@ -7,7 +7,7 @@ const yf = require('yahoo-finance2').default;
 
 const HOST = process.env.PG_HOST || 'localhost';
 const PORT = process.env.PG_PORT || 4000;
-const FURL = process.env.FURL || 'http://localhost:3000';
+const FURL = process.env.FURL || 'https://jarnox-assignment-l885.vercel.app/';
 
 
 const pool = new Pool({
