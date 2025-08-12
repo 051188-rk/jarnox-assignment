@@ -6,9 +6,20 @@ const fetch = require('node-fetch');
 const yf = require('yahoo-finance2').default;
 
 const HOST = process.env.PG_HOST || 'localhost';
-const PORT = process.env.PG_PORT || 5432;
+const PORT = process.env.PG_PORT || 4000;
 const FURL = process.env.FURL || 'http://localhost:3000';
 
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false // Required for Render's managed Postgres
+  }
+});
+
+pool.connect()
+  .then(() => console.log("✅ Connected to Postgres"))
+  .catch(err => console.error("❌ Connection error:", err));
 
 
 const app = express();
@@ -18,9 +29,6 @@ app.use(cors({
   origin: FURL
 }));
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
 
 // Utility function for DB queries
 async function dbQuery(q, params) {
